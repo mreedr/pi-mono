@@ -6953,7 +6953,7 @@ export const MODELS = {
 				cacheWrite: 0.08333333333333334,
 			},
 			contextWindow: 1048576,
-			maxTokens: 65535,
+			maxTokens: 65536,
 		} satisfies Model<"openai-completions">,
 		"google/gemini-2.5-pro": {
 			id: "google/gemini-2.5-pro",
@@ -7021,7 +7021,7 @@ export const MODELS = {
 				cacheWrite: 0.08333333333333334,
 			},
 			contextWindow: 1048576,
-			maxTokens: 65535,
+			maxTokens: 65536,
 		} satisfies Model<"openai-completions">,
 		"google/gemini-3-pro-preview": {
 			id: "google/gemini-3-pro-preview",
@@ -9583,12 +9583,12 @@ export const MODELS = {
 			input: ["text", "image"],
 			cost: {
 				input: 0.25,
-				output: 2,
+				output: 1,
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
 			contextWindow: 262144,
-			maxTokens: 65536,
+			maxTokens: 262144,
 		} satisfies Model<"openai-completions">,
 		"qwen/qwen3.5-397b-a17b": {
 			id: "qwen/qwen3.5-397b-a17b",
