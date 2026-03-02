@@ -78,6 +78,8 @@ export type {
 	InputEventResult,
 	InputSource,
 	KeybindingsManager,
+	LlmContextEvent,
+	LlmContextEventResult,
 	LoadExtensionsResult,
 	LsToolCallEvent,
 	LsToolResultEvent,

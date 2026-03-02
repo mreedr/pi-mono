@@ -6,6 +6,7 @@
 import {
 	getModel,
 	type ImageContent,
+	type Context as LlmContext,
 	type Message,
 	type Model,
 	streamSimple,
@@ -46,6 +47,12 @@ export interface AgentOptions {
 	 * Use for context pruning, injecting external context, etc.
 	 */
 	transformContext?: (messages: AgentMessage[], signal?: AbortSignal) => Promise<AgentMessage[]>;
+
+	/**
+	 * Optional transform applied after convertToLlm, right before the LLM call.
+	 * Use for full LLM context inspection/modification (system prompt, messages, tools).
+	 */
+	transformLlmContext?: (context: LlmContext, signal?: AbortSignal) => Promise<LlmContext>;
 
 	/**
 	 * Steering mode: "all" = send all steering messages at once, "one-at-a-time" = one per turn
@@ -110,6 +117,7 @@ export class Agent {
 	private abortController?: AbortController;
 	private convertToLlm: (messages: AgentMessage[]) => Message[] | Promise<Message[]>;
 	private transformContext?: (messages: AgentMessage[], signal?: AbortSignal) => Promise<AgentMessage[]>;
+	private transformLlmContext?: (context: LlmContext, signal?: AbortSignal) => Promise<LlmContext>;
 	private steeringQueue: AgentMessage[] = [];
 	private followUpQueue: AgentMessage[] = [];
 	private steeringMode: "all" | "one-at-a-time";
@@ -127,6 +135,7 @@ export class Agent {
 		this._state = { ...this._state, ...opts.initialState };
 		this.convertToLlm = opts.convertToLlm || defaultConvertToLlm;
 		this.transformContext = opts.transformContext;
+		this.transformLlmContext = opts.transformLlmContext;
 		this.steeringMode = opts.steeringMode || "one-at-a-time";
 		this.followUpMode = opts.followUpMode || "one-at-a-time";
 		this.streamFn = opts.streamFn || streamSimple;
@@ -434,6 +443,7 @@ export class Agent {
 			maxRetryDelayMs: this._maxRetryDelayMs,
 			convertToLlm: this.convertToLlm,
 			transformContext: this.transformContext,
+			transformLlmContext: this.transformLlmContext,
 			getApiKey: this.getApiKey,
 			getSteeringMessages: async () => {
 				if (skipInitialSteeringPoll) {

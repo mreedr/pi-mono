@@ -1,5 +1,6 @@
 import type {
 	AssistantMessageEvent,
+	Context,
 	ImageContent,
 	Message,
 	Model,
@@ -65,6 +66,16 @@ export interface AgentLoopConfig extends SimpleStreamOptions {
 	 * ```
 	 */
 	transformContext?: (messages: AgentMessage[], signal?: AbortSignal) => Promise<AgentMessage[]>;
+
+	/**
+	 * Optional transform applied after `convertToLlm`, right before the LLM call.
+	 *
+	 * Use this when you need access to the full LLM context:
+	 * - Inspect/modify system prompt
+	 * - Inspect/modify converted LLM messages
+	 * - Inspect/modify available tools
+	 */
+	transformLlmContext?: (context: Context, signal?: AbortSignal) => Promise<Context>;
 
 	/**
 	 * Resolves an API key dynamically for each LLM call.

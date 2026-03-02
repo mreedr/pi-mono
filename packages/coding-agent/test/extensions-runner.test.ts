@@ -372,6 +372,75 @@ describe("ExtensionRunner", () => {
 			expect(errors[0].error).toContain("Handler error!");
 			expect(errors[0].event).toBe("context");
 		});
+
+		it("calls error listeners when llm_context handler throws", async () => {
+			const extCode = `
+				export default function(pi) {
+					pi.on("llm_context", async () => {
+						throw new Error("LLM context error!");
+					});
+				}
+			`;
+			fs.writeFileSync(path.join(extensionsDir, "llm-context-throws.ts"), extCode);
+
+			const result = await discoverAndLoadExtensions([], tempDir, tempDir);
+			const runner = new ExtensionRunner(result.extensions, result.runtime, tempDir, sessionManager, modelRegistry);
+
+			const errors: Array<{ extensionPath: string; event: string; error: string }> = [];
+			runner.onError((err) => {
+				errors.push(err);
+			});
+
+			await runner.emitLlmContext({
+				systemPrompt: "Base",
+				messages: [],
+			});
+
+			expect(errors.length).toBe(1);
+			expect(errors[0].error).toContain("LLM context error!");
+			expect(errors[0].event).toBe("llm_context");
+		});
+	});
+
+	describe("llm_context event", () => {
+		it("chains LLM context modifications across handlers", async () => {
+			const extCode1 = `
+				export default function(pi) {
+					pi.on("llm_context", async (event) => {
+						return {
+							context: {
+								...event.context,
+								systemPrompt: event.context.systemPrompt + " [ext1]",
+							},
+						};
+					});
+				}
+			`;
+			const extCode2 = `
+				export default function(pi) {
+					pi.on("llm_context", async (event) => {
+						return {
+							context: {
+								...event.context,
+								systemPrompt: event.context.systemPrompt + " [ext2]",
+							},
+						};
+					});
+				}
+			`;
+			fs.writeFileSync(path.join(extensionsDir, "llm-context-1.ts"), extCode1);
+			fs.writeFileSync(path.join(extensionsDir, "llm-context-2.ts"), extCode2);
+
+			const result = await discoverAndLoadExtensions([], tempDir, tempDir);
+			const runner = new ExtensionRunner(result.extensions, result.runtime, tempDir, sessionManager, modelRegistry);
+
+			const transformed = await runner.emitLlmContext({
+				systemPrompt: "Base",
+				messages: [],
+			});
+
+			expect(transformed.systemPrompt).toBe("Base [ext1] [ext2]");
+		});
 	});
 
 	describe("message renderers", () => {

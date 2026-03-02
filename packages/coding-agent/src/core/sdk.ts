@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { Agent, type AgentMessage, type ThinkingLevel } from "@mariozechner/pi-agent-core";
-import type { Message, Model } from "@mariozechner/pi-ai";
+import type { Context as LlmContext, Message, Model } from "@mariozechner/pi-ai";
 import { getAgentDir, getDocsPath } from "../config.js";
 import { AgentSession } from "./agent-session.js";
 import { AuthStorage } from "./auth-storage.js";
@@ -297,6 +297,11 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			const runner = extensionRunnerRef.current;
 			if (!runner) return messages;
 			return runner.emitContext(messages);
+		},
+		transformLlmContext: async (llmContext: LlmContext) => {
+			const runner = extensionRunnerRef.current;
+			if (!runner) return llmContext;
+			return runner.emitLlmContext(llmContext);
 		},
 		steeringMode: settingsManager.getSteeringMode(),
 		followUpMode: settingsManager.getFollowUpMode(),

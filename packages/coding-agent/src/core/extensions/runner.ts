@@ -3,7 +3,7 @@
  */
 
 import type { AgentMessage } from "@mariozechner/pi-agent-core";
-import type { ImageContent, Model } from "@mariozechner/pi-ai";
+import type { Context, ImageContent, Model } from "@mariozechner/pi-ai";
 import type { KeyId } from "@mariozechner/pi-tui";
 import { type Theme, theme } from "../../modes/interactive/theme/theme.js";
 import type { ResourceDiagnostic } from "../diagnostics.js";
@@ -32,6 +32,8 @@ import type {
 	InputEvent,
 	InputEventResult,
 	InputSource,
+	LlmContextEvent,
+	LlmContextEventResult,
 	MessageRenderer,
 	RegisteredCommand,
 	RegisteredTool,
@@ -105,6 +107,7 @@ type RunnerEmitEvent = Exclude<
 	| ToolResultEvent
 	| UserBashEvent
 	| ContextEvent
+	| LlmContextEvent
 	| BeforeAgentStartEvent
 	| ResourcesDiscoverEvent
 	| InputEvent
@@ -702,6 +705,42 @@ export class ExtensionRunner {
 		}
 
 		return currentMessages;
+	}
+
+	async emitLlmContext(llmContext: Context): Promise<Context> {
+		const ctx = this.createContext();
+		let currentContext: Context = {
+			systemPrompt: llmContext.systemPrompt,
+			messages: structuredClone(llmContext.messages),
+			tools: llmContext.tools ? [...llmContext.tools] : undefined,
+		};
+
+		for (const ext of this.extensions) {
+			const handlers = ext.handlers.get("llm_context");
+			if (!handlers || handlers.length === 0) continue;
+
+			for (const handler of handlers) {
+				try {
+					const event: LlmContextEvent = { type: "llm_context", context: currentContext };
+					const handlerResult = await handler(event, ctx);
+
+					if (handlerResult && (handlerResult as LlmContextEventResult).context) {
+						currentContext = (handlerResult as LlmContextEventResult).context!;
+					}
+				} catch (err) {
+					const message = err instanceof Error ? err.message : String(err);
+					const stack = err instanceof Error ? err.stack : undefined;
+					this.emitError({
+						extensionPath: ext.path,
+						event: "llm_context",
+						error: message,
+						stack,
+					});
+				}
+			}
+		}
+
+		return currentContext;
 	}
 
 	async emitBeforeAgentStart(

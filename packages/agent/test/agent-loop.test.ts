@@ -236,6 +236,53 @@ describe("agentLoop with AgentMessage", () => {
 		expect(convertedMessages.length).toBe(2);
 	});
 
+	it("should apply transformLlmContext before streaming", async () => {
+		const toolSchema = Type.Object({});
+		const context: AgentContext = {
+			systemPrompt: "Base system prompt",
+			messages: [createUserMessage("Hello")],
+			tools: [
+				{
+					name: "echo",
+					label: "Echo",
+					description: "Echo tool",
+					parameters: toolSchema,
+					execute: async () => ({ content: [{ type: "text", text: "ok" }], details: {} }),
+				},
+			],
+		};
+
+		const config: AgentLoopConfig = {
+			model: createModel(),
+			convertToLlm: identityConverter,
+			transformLlmContext: async (llmContext) => ({
+				...llmContext,
+				systemPrompt: "Modified system prompt",
+				tools: [],
+			}),
+		};
+
+		let seenSystemPrompt = "";
+		let seenToolCount = -1;
+		const stream = agentLoop([], context, config, undefined, (_model, llmContext) => {
+			seenSystemPrompt = llmContext.systemPrompt ?? "";
+			seenToolCount = llmContext.tools?.length ?? 0;
+			const mockStream = new MockAssistantStream();
+			queueMicrotask(() => {
+				const message = createAssistantMessage([{ type: "text", text: "ok" }]);
+				mockStream.push({ type: "done", reason: "stop", message });
+			});
+			return mockStream;
+		});
+
+		for await (const _ of stream) {
+			// consume
+		}
+
+		expect(seenSystemPrompt).toBe("Modified system prompt");
+		expect(seenToolCount).toBe(0);
+	});
+
 	it("should handle tool calls and results", async () => {
 		const toolSchema = Type.Object({ value: Type.String() });
 		const executed: string[] = [];
