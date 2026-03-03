@@ -1,6 +1,6 @@
 {
 	"name": "@mariozechner/pi-ai",
-	"version": "0.55.3",
+	"version": "0.55.4",
 	"description": "Unified LLM API with automatic model discovery and provider configuration",
 	"type": "module",
 	"main": "./dist/index.js",
@@ -13,7 +13,7 @@
 		"README.md"
 	],
 	"scripts": {
-		"clean": "rm -rf dist",
+		"clean": "shx rm -rf dist",
 		"generate-models": "npx tsx scripts/generate-models.ts",
 		"build": "npm run generate-models && tsgo -p tsconfig.build.json",
 		"dev": "tsgo -p tsconfig.build.json --watch --preserveWatchOutput",
