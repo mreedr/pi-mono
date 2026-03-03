@@ -282,12 +282,13 @@ export async function exportFromFile(inputPath: string, options?: ExportOptions 
 	}
 
 	const sm = SessionManager.open(inputPath);
+	const header = sm.getHeader();
 
 	const sessionData: SessionData = {
-		header: sm.getHeader(),
+		header,
 		entries: sm.getEntries(),
 		leafId: sm.getLeafId(),
-		systemPrompt: undefined,
+		systemPrompt: header?.systemPrompt,
 		tools: undefined,
 	};
 

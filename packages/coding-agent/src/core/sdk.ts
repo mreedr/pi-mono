@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { Agent, type AgentMessage, type ThinkingLevel } from "@mariozechner/pi-agent-core";
 import type { Context as LlmContext, Message, Model } from "@mariozechner/pi-ai";
@@ -175,6 +176,8 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 
 	const settingsManager = options.settingsManager ?? SettingsManager.create(cwd, agentDir);
 	const sessionManager = options.sessionManager ?? SessionManager.create(cwd);
+	const sessionFile = sessionManager.getSessionFile();
+	const hasExistingSessionFile = typeof sessionFile === "string" && existsSync(sessionFile);
 
 	if (!resourceLoader) {
 		resourceLoader = new DefaultResourceLoader({ cwd, agentDir, settingsManager });
@@ -361,6 +364,12 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		initialActiveToolNames,
 		extensionRunnerRef,
 	});
+
+	// Capture the initial base prompt for newly-created sessions only.
+	// Existing session files are intentionally left unchanged.
+	if (!hasExistingSessionFile) {
+		sessionManager.setSystemPromptSnapshot(session.baseSystemPrompt);
+	}
 	const extensionsResult = resourceLoader.getExtensions();
 
 	return {

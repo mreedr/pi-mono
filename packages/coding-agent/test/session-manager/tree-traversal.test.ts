@@ -531,3 +531,60 @@ describe("createBranchedSession", () => {
 		}
 	});
 });
+
+describe("system prompt snapshots", () => {
+	it("newSession stores systemPrompt in header", () => {
+		const session = SessionManager.inMemory();
+		session.newSession({ systemPrompt: "base system prompt" });
+
+		expect(session.getHeader()?.systemPrompt).toBe("base system prompt");
+	});
+
+	it("setSystemPromptSnapshot writes once when header field is missing", () => {
+		const session = SessionManager.inMemory();
+
+		session.setSystemPromptSnapshot("first snapshot");
+		session.setSystemPromptSnapshot("second snapshot");
+
+		expect(session.getHeader()?.systemPrompt).toBe("first snapshot");
+	});
+
+	it("createBranchedSession preserves systemPrompt", () => {
+		const session = SessionManager.inMemory();
+		session.newSession({ systemPrompt: "branch prompt snapshot" });
+
+		const id1 = session.appendMessage(userMsg("1"));
+		const id2 = session.appendMessage(assistantMsg("2"));
+		session.appendMessage(userMsg("3"));
+
+		session.branch(id1);
+		session.appendMessage(assistantMsg("branch"));
+
+		session.createBranchedSession(id2);
+		expect(session.getHeader()?.systemPrompt).toBe("branch prompt snapshot");
+	});
+
+	it("forkFrom preserves systemPrompt from source header", () => {
+		const sourceDir = join(tmpdir(), `session-fork-source-${Date.now()}`);
+		const targetDir = join(tmpdir(), `session-fork-target-${Date.now()}`);
+		mkdirSync(sourceDir, { recursive: true });
+		mkdirSync(targetDir, { recursive: true });
+
+		try {
+			const source = SessionManager.create(sourceDir, sourceDir);
+			source.newSession({ systemPrompt: "fork prompt snapshot" });
+			source.appendMessage(userMsg("hello"));
+			source.appendMessage(assistantMsg("world"));
+
+			const sourceFile = source.getSessionFile();
+			expect(sourceFile).toBeDefined();
+			expect(existsSync(sourceFile!)).toBe(true);
+
+			const forked = SessionManager.forkFrom(sourceFile!, targetDir, targetDir);
+			expect(forked.getHeader()?.systemPrompt).toBe("fork prompt snapshot");
+		} finally {
+			rmSync(sourceDir, { recursive: true, force: true });
+			rmSync(targetDir, { recursive: true, force: true });
+		}
+	});
+});

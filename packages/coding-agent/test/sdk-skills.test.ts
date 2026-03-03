@@ -1,4 +1,4 @@
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -106,5 +106,57 @@ This is a test skill.
 
 		expect(session.resourceLoader.getSkills().skills).toEqual([customSkill]);
 		expect(session.resourceLoader.getSkills().diagnostics).toEqual([]);
+	});
+
+	it("stores initial system prompt snapshot in header for a new session", async () => {
+		const sessionDir = join(tempDir, "sessions");
+		const sessionManager = SessionManager.create(tempDir, sessionDir);
+
+		const { session } = await createAgentSession({
+			cwd: tempDir,
+			agentDir: tempDir,
+			sessionManager,
+		});
+
+		expect(session.sessionManager.getHeader()?.systemPrompt).toBeTruthy();
+	});
+
+	it("does not backfill systemPrompt when resuming an existing session without the field", async () => {
+		const sessionDir = join(tempDir, "sessions");
+		const original = SessionManager.create(tempDir, sessionDir);
+		original.appendMessage({ role: "user", content: "hello", timestamp: Date.now() });
+		original.appendMessage({
+			role: "assistant",
+			content: [{ type: "text", text: "world" }],
+			api: "anthropic-messages",
+			provider: "anthropic",
+			model: "claude-sonnet-4-5",
+			usage: {
+				input: 1,
+				output: 1,
+				cacheRead: 0,
+				cacheWrite: 0,
+				totalTokens: 2,
+				cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+			},
+			stopReason: "stop",
+			timestamp: Date.now(),
+		});
+
+		const sessionFile = original.getSessionFile();
+		expect(sessionFile).toBeTruthy();
+		const originalHeader = JSON.parse(readFileSync(sessionFile!, "utf8").split("\n")[0]);
+		expect(originalHeader.systemPrompt).toBeUndefined();
+
+		const resumed = SessionManager.open(sessionFile!, sessionDir);
+		await createAgentSession({
+			cwd: tempDir,
+			agentDir: tempDir,
+			sessionManager: resumed,
+		});
+
+		expect(resumed.getHeader()?.systemPrompt).toBeUndefined();
+		const resumedHeader = JSON.parse(readFileSync(sessionFile!, "utf8").split("\n")[0]);
+		expect(resumedHeader.systemPrompt).toBeUndefined();
 	});
 });

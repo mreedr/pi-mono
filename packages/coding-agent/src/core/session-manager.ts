@@ -33,10 +33,12 @@ export interface SessionHeader {
 	timestamp: string;
 	cwd: string;
 	parentSession?: string;
+	systemPrompt?: string;
 }
 
 export interface NewSessionOptions {
 	parentSession?: string;
+	systemPrompt?: string;
 }
 
 export interface SessionEntryBase {
@@ -730,6 +732,7 @@ export class SessionManager {
 			timestamp,
 			cwd: this.cwd,
 			parentSession: options?.parentSession,
+			systemPrompt: options?.systemPrompt,
 		};
 		this.fileEntries = [header];
 		this.byId.clear();
@@ -1046,6 +1049,24 @@ export class SessionManager {
 	}
 
 	/**
+	 * Persist the initial system prompt snapshot in the header once.
+	 * No-op if the snapshot already exists.
+	 */
+	setSystemPromptSnapshot(systemPrompt: string): void {
+		const header = this.getHeader();
+		if (!header || header.systemPrompt !== undefined) {
+			return;
+		}
+		header.systemPrompt = systemPrompt;
+
+		// For not-yet-flushed sessions, keep the snapshot in memory and let _persist()
+		// write it with the first assistant message.
+		if (this.persist && this.flushed) {
+			this._rewriteFile();
+		}
+	}
+
+	/**
 	 * Get all session entries (excludes header). Returns a shallow copy.
 	 * The session is append-only: use appendXXX() to add entries, branch() to
 	 * change the leaf pointer. Entries cannot be modified or deleted.
@@ -1155,6 +1176,7 @@ export class SessionManager {
 	 */
 	createBranchedSession(leafId: string): string | undefined {
 		const previousSessionFile = this.sessionFile;
+		const currentHeader = this.getHeader();
 		const path = this.getBranch(leafId);
 		if (path.length === 0) {
 			throw new Error(`Entry ${leafId} not found`);
@@ -1175,6 +1197,7 @@ export class SessionManager {
 			timestamp,
 			cwd: this.cwd,
 			parentSession: this.persist ? previousSessionFile : undefined,
+			systemPrompt: currentHeader?.systemPrompt,
 		};
 
 		// Collect labels for entries in the path
@@ -1328,6 +1351,7 @@ export class SessionManager {
 			timestamp,
 			cwd: targetCwd,
 			parentSession: sourcePath,
+			systemPrompt: sourceHeader.systemPrompt,
 		};
 		appendFileSync(newSessionFile, `${JSON.stringify(newHeader)}\n`);
 

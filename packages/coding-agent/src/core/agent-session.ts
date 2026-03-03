@@ -574,6 +574,11 @@ export class AgentSession {
 		return this.agent.state.systemPrompt;
 	}
 
+	/** Base system prompt snapshot (without per-turn extension modifications). */
+	get baseSystemPrompt(): string {
+		return this._baseSystemPrompt;
+	}
+
 	/** Current retry attempt (0 if not retrying) */
 	get retryAttempt(): number {
 		return this._retryAttempt;
@@ -1153,7 +1158,10 @@ export class AgentSession {
 		this._disconnectFromAgent();
 		await this.abort();
 		this.agent.reset();
-		this.sessionManager.newSession({ parentSession: options?.parentSession });
+		this.sessionManager.newSession({
+			parentSession: options?.parentSession,
+			systemPrompt: this._baseSystemPrompt,
+		});
 		this.agent.sessionId = this.sessionManager.getSessionId();
 		this._steeringMessages = [];
 		this._followUpMessages = [];
@@ -2441,7 +2449,10 @@ export class AgentSession {
 		this._pendingNextTurnMessages = [];
 
 		if (!selectedEntry.parentId) {
-			this.sessionManager.newSession({ parentSession: previousSessionFile });
+			this.sessionManager.newSession({
+				parentSession: previousSessionFile,
+				systemPrompt: this._baseSystemPrompt,
+			});
 		} else {
 			this.sessionManager.createBranchedSession(selectedEntry.parentId);
 		}

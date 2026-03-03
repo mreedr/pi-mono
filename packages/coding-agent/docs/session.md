@@ -188,14 +188,17 @@ interface SessionEntryBase {
 First line of the file. Metadata only, not part of the tree (no `id`/`parentId`).
 
 ```json
-{"type":"session","version":3,"id":"uuid","timestamp":"2024-12-03T14:00:00.000Z","cwd":"/path/to/project"}
+{"type":"session","version":3,"id":"uuid","timestamp":"2024-12-03T14:00:00.000Z","cwd":"/path/to/project","systemPrompt":"You are a coding assistant..."}
 ```
 
 For sessions with a parent (created via `/fork` or `newSession({ parentSession })`):
 
 ```json
-{"type":"session","version":3,"id":"uuid","timestamp":"2024-12-03T14:00:00.000Z","cwd":"/path/to/project","parentSession":"/path/to/original/session.jsonl"}
+{"type":"session","version":3,"id":"uuid","timestamp":"2024-12-03T14:00:00.000Z","cwd":"/path/to/project","parentSession":"/path/to/original/session.jsonl","systemPrompt":"You are a coding assistant..."}
 ```
+
+`systemPrompt` is optional. When present, it is a one-time snapshot of the initial base system prompt for that session.
+It is not a per-turn prompt history and is not updated when prompt-affecting runtime state changes mid-session.
 
 ### SessionMessageEntry
 
