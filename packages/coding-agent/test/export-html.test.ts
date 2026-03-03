@@ -6,6 +6,7 @@ import { exportFromFile } from "../src/core/export-html/index.js";
 
 function extractSessionData(html: string): {
 	systemPrompt?: string;
+	tools?: Array<{ name: string; description: string; parameters: unknown }>;
 } {
 	const match = html.match(/<script id="session-data" type="application\/json">([^<]+)<\/script>/);
 	if (!match) {
@@ -36,6 +37,13 @@ describe("exportFromFile", () => {
 			timestamp: "2026-03-02T12:00:00.000Z",
 			cwd: tempDir,
 			systemPrompt: "Persisted system prompt snapshot",
+			availableTools: [
+				{
+					name: "read",
+					description: "Read files",
+					parameters: { type: "object", properties: { path: { type: "string" } }, required: ["path"] },
+				},
+			],
 		};
 		const entry = {
 			type: "message",
@@ -55,5 +63,12 @@ describe("exportFromFile", () => {
 		const html = readFileSync(outputPath, "utf8");
 		const sessionData = extractSessionData(html);
 		expect(sessionData.systemPrompt).toBe("Persisted system prompt snapshot");
+		expect(sessionData.tools).toEqual([
+			{
+				name: "read",
+				description: "Read files",
+				parameters: { type: "object", properties: { path: { type: "string" } }, required: ["path"] },
+			},
+		]);
 	});
 });

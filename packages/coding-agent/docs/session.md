@@ -188,17 +188,18 @@ interface SessionEntryBase {
 First line of the file. Metadata only, not part of the tree (no `id`/`parentId`).
 
 ```json
-{"type":"session","version":3,"id":"uuid","timestamp":"2024-12-03T14:00:00.000Z","cwd":"/path/to/project","systemPrompt":"You are a coding assistant..."}
+{"type":"session","version":3,"id":"uuid","timestamp":"2024-12-03T14:00:00.000Z","cwd":"/path/to/project","systemPrompt":"You are a coding assistant...","availableTools":[{"name":"read","description":"Read files","parameters":{"type":"object","properties":{"path":{"type":"string"}},"required":["path"]}}]}
 ```
 
 For sessions with a parent (created via `/fork` or `newSession({ parentSession })`):
 
 ```json
-{"type":"session","version":3,"id":"uuid","timestamp":"2024-12-03T14:00:00.000Z","cwd":"/path/to/project","parentSession":"/path/to/original/session.jsonl","systemPrompt":"You are a coding assistant..."}
+{"type":"session","version":3,"id":"uuid","timestamp":"2024-12-03T14:00:00.000Z","cwd":"/path/to/project","parentSession":"/path/to/original/session.jsonl","systemPrompt":"You are a coding assistant...","availableTools":[{"name":"read","description":"Read files","parameters":{"type":"object","properties":{"path":{"type":"string"}},"required":["path"]}}]}
 ```
 
 `systemPrompt` is optional. When present, it is a one-time snapshot of the initial base system prompt for that session.
 It is not a per-turn prompt history and is not updated when prompt-affecting runtime state changes mid-session.
+`availableTools` is optional. When present, it is a one-time snapshot of the initially available tools (`name`, `description`, `parameters`), not a per-turn tool history.
 
 ### SessionMessageEntry
 
@@ -377,7 +378,7 @@ Key methods for working with sessions programmatically.
 - `SessionManager.listAll(onProgress?)` - List all sessions across all projects
 
 ### Instance Methods - Session Management
-- `newSession(options?)` - Start a new session (options: `{ parentSession?: string }`)
+- `newSession(options?)` - Start a new session (options: `{ parentSession?: string, systemPrompt?: string, availableTools?: SessionHeaderToolInfo[] }`)
 - `setSessionFile(path)` - Switch to a different session file
 - `createBranchedSession(leafId)` - Extract branch to new session file
 

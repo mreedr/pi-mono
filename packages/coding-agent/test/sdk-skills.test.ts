@@ -119,6 +119,8 @@ This is a test skill.
 		});
 
 		expect(session.sessionManager.getHeader()?.systemPrompt).toBeTruthy();
+		expect(session.sessionManager.getHeader()?.availableTools).toBeTruthy();
+		expect(session.sessionManager.getHeader()?.availableTools?.length).toBeGreaterThan(0);
 	});
 
 	it("does not backfill systemPrompt when resuming an existing session without the field", async () => {
@@ -147,6 +149,7 @@ This is a test skill.
 		expect(sessionFile).toBeTruthy();
 		const originalHeader = JSON.parse(readFileSync(sessionFile!, "utf8").split("\n")[0]);
 		expect(originalHeader.systemPrompt).toBeUndefined();
+		expect(originalHeader.availableTools).toBeUndefined();
 
 		const resumed = SessionManager.open(sessionFile!, sessionDir);
 		await createAgentSession({
@@ -156,7 +159,9 @@ This is a test skill.
 		});
 
 		expect(resumed.getHeader()?.systemPrompt).toBeUndefined();
+		expect(resumed.getHeader()?.availableTools).toBeUndefined();
 		const resumedHeader = JSON.parse(readFileSync(sessionFile!, "utf8").split("\n")[0]);
 		expect(resumedHeader.systemPrompt).toBeUndefined();
+		expect(resumedHeader.availableTools).toBeUndefined();
 	});
 });

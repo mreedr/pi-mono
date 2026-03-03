@@ -34,11 +34,19 @@ export interface SessionHeader {
 	cwd: string;
 	parentSession?: string;
 	systemPrompt?: string;
+	availableTools?: SessionHeaderToolInfo[];
 }
 
 export interface NewSessionOptions {
 	parentSession?: string;
 	systemPrompt?: string;
+	availableTools?: SessionHeaderToolInfo[];
+}
+
+export interface SessionHeaderToolInfo {
+	name: string;
+	description: string;
+	parameters: unknown;
 }
 
 export interface SessionEntryBase {
@@ -733,6 +741,7 @@ export class SessionManager {
 			cwd: this.cwd,
 			parentSession: options?.parentSession,
 			systemPrompt: options?.systemPrompt,
+			availableTools: options?.availableTools,
 		};
 		this.fileEntries = [header];
 		this.byId.clear();
@@ -1067,6 +1076,24 @@ export class SessionManager {
 	}
 
 	/**
+	 * Persist the initial available tools snapshot in the header once.
+	 * No-op if the snapshot already exists.
+	 */
+	setAvailableToolsSnapshot(availableTools: SessionHeaderToolInfo[]): void {
+		const header = this.getHeader();
+		if (!header || header.availableTools !== undefined) {
+			return;
+		}
+		header.availableTools = availableTools;
+
+		// For not-yet-flushed sessions, keep the snapshot in memory and let _persist()
+		// write it with the first assistant message.
+		if (this.persist && this.flushed) {
+			this._rewriteFile();
+		}
+	}
+
+	/**
 	 * Get all session entries (excludes header). Returns a shallow copy.
 	 * The session is append-only: use appendXXX() to add entries, branch() to
 	 * change the leaf pointer. Entries cannot be modified or deleted.
@@ -1198,6 +1225,7 @@ export class SessionManager {
 			cwd: this.cwd,
 			parentSession: this.persist ? previousSessionFile : undefined,
 			systemPrompt: currentHeader?.systemPrompt,
+			availableTools: currentHeader?.availableTools,
 		};
 
 		// Collect labels for entries in the path
@@ -1352,6 +1380,7 @@ export class SessionManager {
 			cwd: targetCwd,
 			parentSession: sourcePath,
 			systemPrompt: sourceHeader.systemPrompt,
+			availableTools: sourceHeader.availableTools,
 		};
 		appendFileSync(newSessionFile, `${JSON.stringify(newHeader)}\n`);
 

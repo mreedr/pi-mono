@@ -369,6 +369,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 	// Existing session files are intentionally left unchanged.
 	if (!hasExistingSessionFile) {
 		sessionManager.setSystemPromptSnapshot(session.baseSystemPrompt);
+		sessionManager.setAvailableToolsSnapshot(session.getAllTools());
 	}
 	const extensionsResult = resourceLoader.getExtensions();
 

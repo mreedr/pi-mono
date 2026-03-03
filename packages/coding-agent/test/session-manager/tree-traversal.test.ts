@@ -587,4 +587,73 @@ describe("system prompt snapshots", () => {
 			rmSync(targetDir, { recursive: true, force: true });
 		}
 	});
+
+	it("newSession stores availableTools in header", () => {
+		const session = SessionManager.inMemory();
+		session.newSession({
+			availableTools: [{ name: "read", description: "Read files", parameters: { type: "object" } }],
+		});
+
+		expect(session.getHeader()?.availableTools).toEqual([
+			{ name: "read", description: "Read files", parameters: { type: "object" } },
+		]);
+	});
+
+	it("setAvailableToolsSnapshot writes once when header field is missing", () => {
+		const session = SessionManager.inMemory();
+
+		session.setAvailableToolsSnapshot([{ name: "read", description: "Read files", parameters: {} }]);
+		session.setAvailableToolsSnapshot([{ name: "write", description: "Write files", parameters: {} }]);
+
+		expect(session.getHeader()?.availableTools).toEqual([
+			{ name: "read", description: "Read files", parameters: {} },
+		]);
+	});
+
+	it("createBranchedSession preserves availableTools", () => {
+		const session = SessionManager.inMemory();
+		session.newSession({
+			availableTools: [{ name: "read", description: "Read files", parameters: { type: "object" } }],
+		});
+
+		const id1 = session.appendMessage(userMsg("1"));
+		const id2 = session.appendMessage(assistantMsg("2"));
+		session.appendMessage(userMsg("3"));
+
+		session.branch(id1);
+		session.appendMessage(assistantMsg("branch"));
+
+		session.createBranchedSession(id2);
+		expect(session.getHeader()?.availableTools).toEqual([
+			{ name: "read", description: "Read files", parameters: { type: "object" } },
+		]);
+	});
+
+	it("forkFrom preserves availableTools from source header", () => {
+		const sourceDir = join(tmpdir(), `session-fork-source-tools-${Date.now()}`);
+		const targetDir = join(tmpdir(), `session-fork-target-tools-${Date.now()}`);
+		mkdirSync(sourceDir, { recursive: true });
+		mkdirSync(targetDir, { recursive: true });
+
+		try {
+			const source = SessionManager.create(sourceDir, sourceDir);
+			source.newSession({
+				availableTools: [{ name: "read", description: "Read files", parameters: { type: "object" } }],
+			});
+			source.appendMessage(userMsg("hello"));
+			source.appendMessage(assistantMsg("world"));
+
+			const sourceFile = source.getSessionFile();
+			expect(sourceFile).toBeDefined();
+			expect(existsSync(sourceFile!)).toBe(true);
+
+			const forked = SessionManager.forkFrom(sourceFile!, targetDir, targetDir);
+			expect(forked.getHeader()?.availableTools).toEqual([
+				{ name: "read", description: "Read files", parameters: { type: "object" } },
+			]);
+		} finally {
+			rmSync(sourceDir, { recursive: true, force: true });
+			rmSync(targetDir, { recursive: true, force: true });
+		}
+	});
 });

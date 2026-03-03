@@ -4,7 +4,7 @@ import { basename, join } from "path";
 import { APP_NAME, getExportTemplateDir } from "../../config.js";
 import { getResolvedThemeColors, getThemeExportColors } from "../../modes/interactive/theme/theme.js";
 import type { ToolInfo } from "../extensions/types.js";
-import type { SessionEntry } from "../session-manager.js";
+import type { SessionEntry, SessionHeaderToolInfo } from "../session-manager.js";
 import { SessionManager } from "../session-manager.js";
 
 /**
@@ -134,6 +134,14 @@ interface SessionData {
 	renderedTools?: Record<string, RenderedToolHtml>;
 }
 
+function mapHeaderTools(tools: SessionHeaderToolInfo[] | undefined): ToolInfo[] | undefined {
+	return tools?.map((tool) => ({
+		name: tool.name,
+		description: tool.description,
+		parameters: tool.parameters as ToolInfo["parameters"],
+	}));
+}
+
 /**
  * Core HTML generation logic shared by both export functions.
  */
@@ -238,6 +246,7 @@ export async function exportSessionToHtml(
 	}
 
 	const entries = sm.getEntries();
+	const header = sm.getHeader();
 
 	// Pre-render custom tools if a tool renderer is provided
 	let renderedTools: Record<string, RenderedToolHtml> | undefined;
@@ -250,11 +259,13 @@ export async function exportSessionToHtml(
 	}
 
 	const sessionData: SessionData = {
-		header: sm.getHeader(),
+		header,
 		entries,
 		leafId: sm.getLeafId(),
 		systemPrompt: state?.systemPrompt,
-		tools: state?.tools?.map((t) => ({ name: t.name, description: t.description, parameters: t.parameters })),
+		tools:
+			mapHeaderTools(header?.availableTools) ??
+			state?.tools?.map((t) => ({ name: t.name, description: t.description, parameters: t.parameters })),
 		renderedTools,
 	};
 
@@ -289,7 +300,7 @@ export async function exportFromFile(inputPath: string, options?: ExportOptions 
 		entries: sm.getEntries(),
 		leafId: sm.getLeafId(),
 		systemPrompt: header?.systemPrompt,
-		tools: undefined,
+		tools: mapHeaderTools(header?.availableTools),
 	};
 
 	const html = generateHtml(sessionData, opts.themeName);

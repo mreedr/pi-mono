@@ -1161,6 +1161,7 @@ export class AgentSession {
 		this.sessionManager.newSession({
 			parentSession: options?.parentSession,
 			systemPrompt: this._baseSystemPrompt,
+			availableTools: this.getAllTools(),
 		});
 		this.agent.sessionId = this.sessionManager.getSessionId();
 		this._steeringMessages = [];
@@ -2452,6 +2453,7 @@ export class AgentSession {
 			this.sessionManager.newSession({
 				parentSession: previousSessionFile,
 				systemPrompt: this._baseSystemPrompt,
+				availableTools: this.getAllTools(),
 			});
 		} else {
 			this.sessionManager.createBranchedSession(selectedEntry.parentId);
